@@ -1,0 +1,60 @@
+#include <SoftwareSerial.h>
+#include <TinyGPS++.h>
+
+float latitude, longitude; // Create variables for latitude and longitude
+SoftwareSerial gpsSerial(2, 3); // GPS module (TX, RX)
+SoftwareSerial gsmModule(8, 9); // GSM module (TX, RX)
+TinyGPSPlus gps; // Create a GPS object
+int lastState = LOW;  // the previous state from the input pin
+int currentState;
+
+const int SENSOR_PIN = 7; // Arduino's input pin connected to the sensor's SIGNAL pin
+
+void setup() {
+  Serial.begin(9600);
+  gpsSerial.begin(9600);
+  gpsSerial.listen();
+  textgps(); // Get GPS coordinates
+
+  gsmModule.begin(9600);
+  gsmModule.print("\r");
+  delay(1000);
+  gsmModule.print("AT+CMGF=1\r"); // Set SMS mode
+  delay(1000);
+  gsmModule.print("AT+CMGS=\"+91**********\"\r"); // Replace with your recipient's number
+  delay(1000);
+  gsmModule.println("BAND IS REMOVED");
+  gsmModule.println("https://www.google.com/maps/place/");
+  gsmModule.print(latitude, 6);
+  gsmModule.print(",");
+  gsmModule.print(longitude, 6);
+  gsmModule.write(0x1A); // Send SMS
+  delay(1000);
+}
+
+void loop() {
+  // Check touch sensor state
+  currentState = digitalRead(SENSOR_PIN);
+  if (currentState == HIGH && lastState == LOW) {
+    // Touch released, send SMS
+    // (Code for sending SMS already executed in setup)
+    // You can add additional logic or actions here if needed
+  }
+  lastState = currentState;
+}
+
+void textgps() {
+  while (1) {
+    while (gpsSerial.available() > 0) {
+      gps.encode(gpsSerial.read());
+    }
+    if (gps.location.isUpdated()) {
+      latitude = gps.location.lat();
+      longitude = gps.location.lng();
+      break;
+    }
+  }
+  Serial.print("LATITUDE="); Serial.println(latitude, 6);
+  Serial.print("LONGITUDE="); Serial.println(longitude, 6);
+  delay(1000);
+}
